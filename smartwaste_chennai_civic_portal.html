@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartWaste Chennai - Civic Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        #map { height: 380px; width: 100%; border-radius: 0.75rem; z-index: 1; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200 font-sans min-h-screen flex flex-col">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('home')">
+                    <div class="bg-emerald-600 text-white p-2 rounded-xl shadow-md">
+                        <i class="fa-solid fa-recycle text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">SmartWaste <span class="text-emerald-600">Chennai</span></h1>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">GCC Civic & Waste Operations Portal</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex space-x-1 lg:space-x-2 text-sm font-medium">
+                    <button onclick="switchTab('home')" id="nav-home" class="nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
+                        <i class="fa-solid fa-house"></i><span>Home</span>
+                    </button>
+                    <button onclick="switchTab('citizen')" id="nav-citizen" class="nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <i class="fa-solid fa-user"></i><span>Citizen Portal</span>
+                    </button>
+                    <button onclick="switchTab('community')" id="nav-community" class="nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <i class="fa-solid fa-users"></i><span>Community Hub</span>
+                    </button>
+                    <button onclick="switchTab('cleaner')" id="nav-cleaner" class="nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <i class="fa-solid fa-broom"></i><span>Sanitation</span>
+                    </button>
+                    <button onclick="switchTab('authority')" id="nav-authority" class="nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <i class="fa-solid fa-building-columns"></i><span>GCC Officers</span>
+                    </button>
+                    <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <i class="fa-solid fa-shield-halved"></i><span>Super Admin</span>
+                    </button>
+                </nav>
+
+                <!-- Auth Controls & Session Display -->
+                <div class="flex items-center space-x-3">
+                    <button onclick="toggleDarkMode()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" title="Toggle Theme">
+                        <i id="theme-icon" class="fa-solid fa-moon text-lg"></i>
+                    </button>
+
+                    <!-- Unauthenticated Login Button -->
+                    <div id="auth-nav-guest" class="flex items-center space-x-2">
+                        <button onclick="switchTab('auth')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center space-x-1.5">
+                            <i class="fa-solid fa-right-to-bracket"></i><span>Sign In / Register</span>
+                        </button>
+                    </div>
+
+                    <!-- Authenticated User Pill -->
+                    <div id="auth-nav-user" class="hidden items-center space-x-2">
+                        <div class="flex items-center bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                            <i class="fa-solid fa-circle-user mr-1.5 text-emerald-600"></i>
+                            <span id="nav-user-name">Kavitha M.</span>
+                            <span id="nav-user-id" class="ml-1 font-mono text-[10px] bg-emerald-200 dark:bg-emerald-800 px-1.5 py-0.5 rounded text-emerald-900 dark:text-emerald-100">CIT-1042</span>
+                        </div>
+                        <button onclick="handleSignOut()" class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition" title="Sign Out">
+                            <i class="fa-solid fa-power-off"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Navigation Bar -->
+        <div class="md:hidden flex overflow-x-auto border-t border-gray-200 dark:border-gray-700 px-2 py-2 space-x-1 text-xs font-medium bg-gray-50 dark:bg-gray-800">
+            <button onclick="switchTab('home')" id="mnav-home" class="mnav-btn px-3 py-1.5 rounded-md whitespace-nowrap bg-emerald-600 text-white">Home</button>
+            <button onclick="switchTab('citizen')" id="mnav-citizen" class="mnav-btn px-3 py-1.5 rounded-md whitespace-nowrap bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Citizen</button>
+            <button onclick="switchTab('community')" id="mnav-community" class="mnav-btn px-3 py-1.5 rounded-md whitespace-nowrap bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Community</button>
+            <button onclick="switchTab('cleaner')" id="mnav-cleaner" class="mnav-btn px-3 py-1.5 rounded-md whitespace-nowrap bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Sanitation</button>
+            <button onclick="switchTab('authority')" id="mnav-authority" class="mnav-btn px-3 py-1.5 rounded-md whitespace-nowrap bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Officers</button>
+            <button onclick="switchTab('admin')" id="mnav-admin" class="mnav-btn px-3 py-1.5 rounded-md whitespace-nowrap bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Admin</button>
+        </div>
+    </header>
+
+    <!-- BROADCAST CIVIC ALERT BANNER -->
+    <div id="alert-banner-container" class="hidden bg-amber-500 text-white px-4 py-2.5 shadow-sm text-sm font-medium flex items-center justify-between">
+        <div class="flex items-center space-x-2 max-w-7xl mx-auto w-full">
+            <i class="fa-solid fa-bullhorn text-lg animate-bounce"></i>
+            <span id="alert-banner-text">MUNICIPAL ALERT: Heavy rainfall expected in Zone 9 & 10. Waste collection schedules updated.</span>
+        </div>
+        <button onclick="dismissAlert()" class="text-white hover:text-amber-100"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- MAIN APP CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- 0. HOME PAGE TAB -->
+        <div id="tab-home" class="tab-content space-y-8">
+            <!-- Hero Banner -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-teal-800 to-slate-900 text-white shadow-xl p-8 md:p-12">
+                <div class="relative z-10 max-w-2xl space-y-4">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 backdrop-blur-md">
+                        <i class="fa-solid fa-leaf text-emerald-400"></i> GCC Smart City Initiative
+                    </span>
+                    <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                        Transforming Chennai into a Cleaner, Greener Metropolis
+                    </h1>
+                    <p class="text-emerald-100 text-sm md:text-base leading-relaxed">
+                        Report illegal dumping with live camera location tracking, track real-time sanitation responses, upvote civic priorities, and earn Eco-Points.
+                    </p>
+                    <div class="pt-4 flex flex-wrap gap-3">
+                        <button onclick="switchTab('citizen'); openReportModal();" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-3 rounded-2xl shadow-lg transition flex items-center space-x-2 text-sm">
+                            <i class="fa-solid fa-camera"></i><span>Report Garbage Dump</span>
+                        </button>
+                        <button onclick="switchTab('community')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-2xl backdrop-blur-md transition flex items-center space-x-2 text-sm border border-white/20">
+                            <i class="fa-solid fa-users"></i><span>Explore Community Hub</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Background Graphic Element -->
+                <div class="absolute -right-10 -bottom-10 opacity-15 pointer-events-none">
+                    <i class="fa-solid fa-city text-[280px]"></i>
+                </div>
+            </div>
+
+            <!-- Real-Time Municipal Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm text-center">
+                    <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-2 text-lg">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white" id="home-stat-total">3</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Complaints Logged</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm text-center">
+                    <div class="w-10 h-10 bg-amber-100 dark:bg-amber-950 text-amber-600 rounded-xl flex items-center justify-center mx-auto mb-2 text-lg">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-amber-600" id="home-stat-pending">2</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Pending Cleanup</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm text-center">
+                    <div class="w-10 h-10 bg-teal-100 dark:bg-teal-950 text-teal-600 rounded-xl flex items-center justify-center mx-auto mb-2 text-lg">
+                        <i class="fa-solid fa-check-double"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-emerald-600" id="home-stat-resolved">1</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Cleared & Resolved</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm text-center">
+                    <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-950 text-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-2 text-lg">
+                        <i class="fa-solid fa-truck-monster"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-indigo-600">15 Zones</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">GCC Coverage Area</div>
+                </div>
+            </div>
+
+            <!-- Integrated Waste Segregation Lookup Widget -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass font-emerald-600 text-emerald-600"></i> Instant Waste Segregation Guide
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Search any item to learn which bin category (Wet, Dry, E-Waste, Bio-Hazard) it belongs to.</p>
+                    </div>
+                    <div class="w-full md:w-72">
+                        <input type="text" id="segregation-search" onkeyup="searchWasteSegregation()" placeholder="Type item (e.g. Battery, Banana Peel, Bottle)..." class="w-full px-4 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
+                
+                <div id="segregation-results" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                        <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">WET / ORGANIC (Green Bin)</span>
+                        <p class="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Food scraps, vegetable peels, garden leaves, tea bags.</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl">
+                        <span class="text-xs font-bold text-blue-700 dark:text-blue-300">DRY / RECYCLABLE (Blue Bin)</span>
+                        <p class="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Plastic bottles, cardboard, newspapers, milk packets.</p>
+                    </div>
+                    <div class="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl">
+                        <span class="text-xs font-bold text-amber-700 dark:text-amber-300">DOMESTIC HAZARDOUS (Red Bin)</span>
+                        <p class="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Paints, batteries, expired medicines, sanitary waste.</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl">
+                        <span class="text-xs font-bold text-purple-700 dark:text-purple-300">E-WASTE (Black Bin)</span>
+                        <p class="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Old chargers, broken phones, wires, computer parts.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 0.5 DEDICATED AUTHENTICATION PORTAL (SIGN IN / REGISTER) -->
+        <div id="tab-auth" class="tab-content hidden max-w-md mx-auto py-6">
+            <div class="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-xl space-y-6">
+                <!-- Auth Header -->
+                <div class="text-center space-y-2">
+                    <div class="w-14 h-14 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">GCC Civic Identity Auth</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Access your personalized role workspace</p>
+                </div>
+
+                <!-- Sign In / Register Tab Toggle -->
+                <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl text-xs font-bold">
+                    <button type="button" onclick="toggleAuthMode('signin')" id="btn-auth-signin" class="w-1/2 py-2 rounded-lg bg-white dark:bg-gray-800 text-emerald-600 shadow transition">Sign In</button>
+                    <button type="button" onclick="toggleAuthMode('register')" id="btn-auth-register" class="w-1/2 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 transition">Create Account</button>
+                </div>
+
+                <!-- SIGN IN FORM -->
+                <form id="form-signin" onsubmit="handleSignInSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Account ID or Mobile Number</label>
+                        <input type="text" id="signin-id" placeholder="e.g. CIT-1042 or 9876543210" required class="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                        <input type="password" id="signin-pass" value="password123" required class="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow transition">Sign In to Dashboard</button>
+
+                    <!-- Quick Demo Credentials Fill -->
+                    <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <p class="text-[11px] text-gray-400 text-center mb-2">Quick Demo Auto-Fill Roles:</p>
+                        <div class="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                            <button type="button" onclick="quickFillAuth('CIT-1042', 'Citizen')" class="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-left">
+                                <span class="text-emerald-600">Citizen</span>: CIT-1042
+                            </button>
+                            <button type="button" onclick="quickFillAuth('CLN-3041', 'Sanitation Worker')" class="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-left">
+                                <span class="text-blue-600">Cleaner</span>: CLN-3041
+                            </button>
+                            <button type="button" onclick="quickFillAuth('GCC-8821', 'GCC Officer')" class="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-left">
+                                <span class="text-purple-600">Officer</span>: GCC-8821
+                            </button>
+                            <button type="button" onclick="quickFillAuth('ADM-9901', 'Super Admin')" class="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-left">
+                                <span class="text-amber-600">Admin</span>: ADM-9901
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- REGISTER / CREATE ACCOUNT FORM -->
+                <form id="form-register" onsubmit="handleRegisterSubmit(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                        <input type="text" id="reg-name" placeholder="e.g. Ramesh Kumar" required class="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Select Role</label>
+                        <select id="reg-role" class="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="citizen">Citizen</option>
+                            <option value="cleaner">Sanitation Worker (Cleaner)</option>
+                            <option value="authority">GCC Zonal Officer</option>
+                            <option value="admin">Super Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Chennai Zone / Ward</label>
+                        <select id="reg-zone" class="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="Zone 9 - Mylapore">Zone 9 - Mylapore</option>
+                            <option value="Zone 13 - Velachery">Zone 13 - Velachery</option>
+                            <option value="Zone 10 - Kodambakkam">Zone 10 - Kodambakkam</option>
+                            <option value="Zone 5 - Royapuram">Zone 5 - Royapuram</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                        <input type="password" id="reg-pass" required placeholder="••••••••" class="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow transition">Generate Account ID & Register</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 1. CITIZEN PORTAL TAB -->
+        <div id="tab-citizen" class="tab-content space-y-6 hidden">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold">Clean Chennai Starts With You</h2>
+                    <p class="text-emerald-100 text-sm mt-1">Report illegal garbage dumping, uncleaned bins, or request special sanitation services.</p>
+                </div>
+                <button onclick="openReportModal()" class="bg-white text-emerald-800 font-bold px-5 py-2.5 rounded-xl shadow-md hover:bg-emerald-50 transition flex items-center space-x-2 text-sm">
+                    <i class="fa-solid fa-camera-retro text-emerald-600"></i><span>Report Garbage Now</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left: Map & Direct Location Picker -->
+                <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-map-location-dot text-emerald-600"></i> Active Grievances Map (Chennai)
+                        </h3>
+                        <span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">Interactive Leaflet GIS</span>
+                    </div>
+                    <div id="map"></div>
+                </div>
+
+                <!-- Right: Quick Stats & My Submissions -->
+                <div class="space-y-6">
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-3 text-sm">Citizen Profile & Stats</h3>
+                        <div class="grid grid-cols-2 gap-3 text-center">
+                            <div class="bg-emerald-50 dark:bg-emerald-950/50 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900">
+                                <div class="text-xl font-bold text-emerald-600 dark:text-emerald-400" id="user-reports-count">3</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Reports Lodged</div>
+                            </div>
+                            <div class="bg-amber-50 dark:bg-amber-950/50 p-3 rounded-xl border border-amber-100 dark:border-amber-900">
+                                <div class="text-xl font-bold text-amber-600 dark:text-amber-400" id="user-eco-points">150</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Eco Karma Pts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtered Citizen Grievance Tracker -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-3 text-sm">Recent City Reports</h3>
+                        <div id="citizen-grievance-list" class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                            <!-- Dynamic Content Inserted Here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. COMMUNITY DASHBOARD TAB -->
+        <div id="tab-community" class="tab-content space-y-6 hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-md">
+                <h2 class="text-2xl font-bold">Civic & Neighborhood Waste Hub</h2>
+                <p class="text-blue-100 text-sm mt-1">Upvote urgent issues, join local beach & lake cleaning drives, and discuss sustainable waste practices.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Community Feed with Upvotes -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-fire text-amber-500"></i> High-Priority Citizen Reports (Upvote Urgency)
+                        </h3>
+                    </div>
+
+                    <div id="community-feed-list" class="space-y-4">
+                        <!-- Dynamic Feed Items -->
+                    </div>
+                </div>
+
+                <!-- Leaderboard & Volunteer Events -->
+                <div class="space-y-6">
+                    <!-- Clean Up Drives -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-3 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-hand-holding-hand text-emerald-500"></i> Upcoming Clean-Up Drives
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">THIS SUNDAY</span>
+                                <h4 class="font-semibold text-sm mt-1">Marina Beach Plastic Clean-Up</h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Zone 9 - Lighthouse End</p>
+                                <button onclick="joinDrive('Marina Drive')" class="mt-2 w-full text-xs font-semibold py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition">Join Drive (28 Joined)</button>
+                            </div>
+
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                                <span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded">NEXT SATURDAY</span>
+                                <h4 class="font-semibold text-sm mt-1">Velachery Lake Restoration</h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Zone 13 - Bypass Road</p>
+                                <button onclick="joinDrive('Velachery Drive')" class="mt-2 w-full text-xs font-semibold py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">Join Drive (14 Joined)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Eco Leaderboard -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-3 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-trophy text-amber-500"></i> Top Eco-Citizens
+                        </h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                                <span class="font-bold text-amber-700 dark:text-amber-300">🥇 R. Sundaram (Ward 142)</span>
+                                <span class="font-semibold">480 pts</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                                <span class="font-bold text-gray-600 dark:text-gray-400">🥈 Priya K. (Ward 176)</span>
+                                <span class="font-semibold">390 pts</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 rounded-lg bg-amber-900/10">
+                                <span class="font-bold text-amber-800 dark:text-amber-500">🥉 Ananth V. (Ward 113)</span>
+                                <span class="font-semibold">310 pts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. SANITATION WORKER TAB -->
+        <div id="tab-cleaner" class="tab-content space-y-6 hidden">
+            <div class="bg-gradient-to-r from-teal-600 to-emerald-700 rounded-2xl p-6 text-white shadow-md flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold">Field Sanitation Console</h2>
+                    <p class="text-emerald-100 text-sm mt-1">Worker Account: <span id="cleaner-user-id" class="font-mono bg-emerald-800 px-2 py-0.5 rounded text-xs">CLN-3041 (Murugan S.)</span></p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs bg-white/20 px-3 py-1 rounded-full font-semibold">Zone 9 - Mylapore</span>
+                </div>
+            </div>
+
+            <!-- Task List for Cleaners -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                <h3 class="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-check text-emerald-600"></i> Assigned Pickup Work Orders
+                </h3>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400">
+                                <th class="p-3">Grievance ID</th>
+                                <th class="p-3">Photo</th>
+                                <th class="p-3">Location & Landmark</th>
+                                <th class="p-3">Urgency</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cleaner-task-table" class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. GCC OFFICERS TAB -->
+        <div id="tab-authority" class="tab-content space-y-6 hidden">
+            <div class="bg-gradient-to-r from-slate-700 to-slate-900 rounded-2xl p-6 text-white shadow-md">
+                <h2 class="text-2xl font-bold">GCC Zonal Management Dashboard</h2>
+                <p class="text-slate-300 text-sm mt-1">Supervise city-wide sanitation metrics, dispatch response teams, and review open complaints.</p>
+            </div>
+
+            <!-- Charts & Analytics Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 class="font-bold text-gray-900 dark:text-white mb-4 text-sm">Grievances by Category Breakdown</h3>
+                    <div class="h-56 flex justify-center items-center">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 class="font-bold text-gray-900 dark:text-white mb-4 text-sm">Resolution Status Breakdown</h3>
+                    <div class="h-56 flex justify-center items-center">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Officer Grievance Management List -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <h3 class="font-bold text-lg text-gray-900 dark:text-white">All Zonal Grievances Log</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 text-gray-500">
+                                <th class="p-3">ID</th>
+                                <th class="p-3">Photo</th>
+                                <th class="p-3">Citizen</th>
+                                <th class="p-3">Category</th>
+                                <th class="p-3">Location</th>
+                                <th class="p-3">Assigned Worker</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="authority-grievance-table" class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. MUNICIPAL SUPER-ADMIN CONTROL PANEL TAB -->
+        <div id="tab-admin" class="tab-content space-y-6 hidden">
+            <!-- Passcode Modal / Panel Guard -->
+            <div id="admin-auth-guard" class="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-gray-200 dark:border-gray-700 max-w-md mx-auto text-center shadow-lg space-y-4">
+                <div class="w-16 h-16 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Municipal Super-Admin Access</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Enter security passcode to unlock system control panel. (Default Passcode: <span class="font-mono text-emerald-600 font-bold">admin123</span>)</p>
+                <div class="space-y-3">
+                    <input type="password" id="admin-passcode-input" placeholder="Enter Admin Passcode" class="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <button onclick="verifyAdminAccess()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition">Authenticate Access</button>
+                </div>
+            </div>
+
+            <!-- Admin Console (Hidden until authenticated) -->
+            <div id="admin-console-content" class="hidden space-y-6">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-purple-800 to-indigo-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="bg-purple-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">SUPER ADMIN LEVEL</span>
+                            <span class="text-xs text-purple-200 font-mono">ADM-9901</span>
+                        </div>
+                        <h2 class="text-2xl font-bold mt-1">Greater Chennai Corporation Master Control Panel</h2>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="exportGrievancesCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1">
+                            <i class="fa-solid fa-file-csv"></i><span>Export CSV Data</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Admin Analytics Metric Overview -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold">Total Complaints</div>
+                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1" id="admin-stat-total">0</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold">Resolution Rate %</div>
+                        <div class="text-2xl font-bold text-emerald-600 mt-1" id="admin-stat-rate">0%</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold">Active Cleaners on Duty</div>
+                        <div class="text-2xl font-bold text-blue-600 mt-1">42</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold">High Risk Red Zones</div>
+                        <div class="text-2xl font-bold text-rose-600 mt-1">3 Zones</div>
+                    </div>
+                </div>
+
+                <!-- Civic Alert Broadcast Console -->
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-3">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-bullhorn text-amber-500"></i> Dispatch System-Wide Municipal Emergency Alert
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="admin-alert-text" placeholder="Enter emergency notice message (e.g. Cyclone alert, Collection delay)..." class="flex-grow text-xs sm:text-sm px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <button onclick="dispatchCivicAlert()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center justify-center space-x-1 whitespace-nowrap">
+                            <i class="fa-solid fa-paper-plane"></i><span>Broadcast Alert</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User Account Management & Registered IDs Directory -->
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-id-card text-indigo-500"></i> Registered User & Staff Accounts Directory
+                    </h3>
+                    <div id="admin-user-directory" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                        <!-- Dynamic Directory Items -->
+                    </div>
+                </div>
+
+                <!-- Fleet & Master Grievances Console -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                    <h3 class="font-bold text-lg text-gray-900 dark:text-white">Master Grievance & Task Reassignment Console</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 text-gray-500">
+                                    <th class="p-3">ID</th>
+                                    <th class="p-3">Photo</th>
+                                    <th class="p-3">Location</th>
+                                    <th class="p-3">Assigned Cleaner</th>
+                                    <th class="p-3">Urgency</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-right">Admin Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-grievance-table" class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <!-- Dynamic Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL 1: REPORT GARBAGE (WITH PHOTO & GPS) -->
+    <div id="modal-report" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-camera text-emerald-600"></i> Report Garbage Dump
+                </h3>
+                <button onclick="closeReportModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="reportForm" onsubmit="handleReportSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Waste Category</label>
+                    <select id="report-category" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="Illegal Dump">Illegal Overflowing Dump</option>
+                        <option value="Uncleaned Public Bin">Uncleaned Street Bin</option>
+                        <option value="Plastic Accumulation">Plastic / E-Waste Accumulation</option>
+                        <option value="Bio-Hazard Waste">Hazardous / Medical Waste</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Upload Photo / Snap Dump</label>
+                    <input type="file" id="report-photo-input" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)" class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-950 dark:file:text-emerald-300">
+                    
+                    <div id="photo-preview-container" class="mt-2 hidden relative rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600">
+                        <img id="photo-preview" src="" alt="Preview" class="w-full h-40 object-cover">
+                        <button type="button" onclick="removeSelectedPhoto()" class="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Location Address & Landmark</label>
+                    <input type="text" id="report-location" placeholder="e.g. Near Luz Church Road Bus Stop, Mylapore" required class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div>
+                    <button type="button" onclick="fetchCurrentGPS()" class="w-full text-xs font-semibold py-2 bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl border border-gray-300 dark:border-gray-600 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-location-crosshairs text-emerald-600"></i><span id="gps-status-text">Attach Current GPS Coordinates</span>
+                    </button>
+                    <input type="hidden" id="report-lat" value="13.0339">
+                    <input type="hidden" id="report-lng" value="80.2696">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Additional Details</label>
+                    <textarea id="report-description" rows="2" placeholder="Describe waste quantity or urgency..." class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeReportModal()" class="px-4 py-2 text-xs font-semibold rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow transition">Submit Complaint</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: FULL SIZE PHOTO INSPECTOR -->
+    <div id="modal-photo-inspect" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="relative max-w-2xl w-full bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-2xl">
+            <button onclick="closePhotoInspectModal()" class="absolute top-3 right-3 text-white bg-gray-900/60 hover:bg-gray-900 p-2 rounded-full"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <img id="inspect-full-photo" src="" alt="Waste Photo" class="w-full h-auto max-h-[75vh] object-contain rounded-xl">
+            <div id="inspect-photo-caption" class="mt-3 text-xs text-center text-gray-600 dark:text-gray-300 font-medium"></div>
+        </div>
+    </div>
+
+    <!-- APP STATE & LOGIC SCRIPT -->
+    <script>
+        // Registered User Directory & Session State
+        let userAccounts = [
+            { id: "CIT-1042", name: "Kavitha M.", role: "Citizen", zone: "Zone 9 - Mylapore", points: 150 },
+            { id: "CLN-3041", name: "Murugan S.", role: "Sanitation Worker", zone: "Zone 9 - Mylapore", status: "On Duty" },
+            { id: "GCC-8821", name: "Dr. Arul Raj", role: "GCC Zonal Officer", zone: "Zone 9 Executive" },
+            { id: "ADM-9901", name: "Super Admin", role: "Super Admin", zone: "Chennai Headquarters" }
+        ];
+
+        let currentUser = userAccounts[0]; // Default logged in citizen
+
+        // Grievance Mock Data
+        let grievances = [
+            {
+                id: "GRV-901",
+                category: "Illegal Dump",
+                location: "Luz Church Road, Mylapore, Chennai",
+                lat: 13.0339,
+                lng: 80.2696,
+                photo: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80",
+                upvotes: 24,
+                urgency: "High",
+                status: "Pending",
+                assignedWorker: "CLN-3041 (Murugan S.)",
+                citizen: "Kavitha M. (CIT-1042)",
+                date: "2026-10-25"
+            },
+            {
+                id: "GRV-902",
+                category: "Uncleaned Public Bin",
+                location: "100 Feet Road, Velachery, Chennai",
+                lat: 12.9782,
+                lng: 80.2223,
+                photo: "https://images.unsplash.com/photo-1611284446314-60a55ac7de9f?auto=format&fit=crop&w=600&q=80",
+                upvotes: 12,
+                urgency: "Medium",
+                status: "In Progress",
+                assignedWorker: "CLN-3041 (Murugan S.)",
+                citizen: "Santhosh R. (CIT-1099)",
+                date: "2026-10-26"
+            },
+            {
+                id: "GRV-903",
+                category: "Plastic Accumulation",
+                location: "Besant Nagar Beach Approach, Chennai",
+                lat: 13.0002,
+                lng: 80.2668,
+                photo: "https://images.unsplash.com/photo-1621451537084-482c73073a0f?auto=format&fit=crop&w=600&q=80",
+                upvotes: 38,
+                urgency: "High",
+                status: "Resolved",
+                assignedWorker: "CLN-2012 (Kannan P.)",
+                citizen: "Ananth V. (CIT-1102)",
+                date: "2026-10-24"
+            }
+        ];
+
+        let currentActiveTab = 'home';
+        let currentPhotoDataUrl = null;
+        let mapInstance = null;
+        let categoryChartInstance = null;
+        let statusChartInstance = null;
+        let isAdminAuthenticated = false;
+
+        // ON APP INITIALIZATION
+        window.onload = function() {
+            renderAuthSessionUI();
+            renderAllViews();
+        };
+
+        // NAVIGATION SWITCHER
+        function switchTab(tabName) {
+            currentActiveTab = tabName;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            // Style desktop buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700";
+            });
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            if(activeNav) {
+                activeNav.className = "nav-btn px-3 py-2 rounded-lg flex items-center space-x-2 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold";
+            }
+
+            // Invalidate Map size on visibility change
+            if (tabName === 'citizen') {
+                if (!mapInstance) {
+                    initLeafletMap();
+                } else {
+                    setTimeout(() => mapInstance.invalidateSize(), 200);
+                }
+            }
+            if (tabName === 'authority' && !categoryChartInstance) {
+                setTimeout(initCharts, 200);
+            }
+        }
+
+        // AUTH TAB & REGISTER TOGGLER
+        function toggleAuthMode(mode) {
+            const btnSignin = document.getElementById('btn-auth-signin');
+            const btnRegister = document.getElementById('btn-auth-register');
+            const formSignin = document.getElementById('form-signin');
+            const formRegister = document.getElementById('form-register');
+
+            if(mode === 'signin') {
+                btnSignin.className = "w-1/2 py-2 rounded-lg bg-white dark:bg-gray-800 text-emerald-600 shadow transition";
+                btnRegister.className = "w-1/2 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 transition";
+                formSignin.classList.remove('hidden');
+                formRegister.classList.add('hidden');
+            } else {
+                btnRegister.className = "w-1/2 py-2 rounded-lg bg-white dark:bg-gray-800 text-emerald-600 shadow transition";
+                btnSignin.className = "w-1/2 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 transition";
+                formRegister.classList.remove('hidden');
+                formSignin.classList.add('hidden');
+            }
+        }
+
+        // QUICK FILL FOR AUTH
+        function quickFillAuth(accId, roleName) {
+            document.getElementById('signin-id').value = accId;
+        }
+
+        // HANDLE SIGN IN
+        function handleSignInSubmit(e) {
+            e.preventDefault();
+            const idInput = document.getElementById('signin-id').value.trim();
+            const foundUser = userAccounts.find(u => u.id.toLowerCase() === idInput.toLowerCase() || u.name.toLowerCase().includes(idInput.toLowerCase()));
+
+            if(foundUser) {
+                currentUser = foundUser;
+                renderAuthSessionUI();
+                alert(`Welcome back, ${currentUser.name}! Logged in as ${currentUser.role}.`);
+                // Route to appropriate dashboard
+                if(currentUser.role === 'Citizen') switchTab('citizen');
+                else if(currentUser.role === 'Sanitation Worker') switchTab('cleaner');
+                else if(currentUser.role === 'GCC Zonal Officer') switchTab('authority');
+                else if(currentUser.role === 'Super Admin') switchTab('admin');
+                else switchTab('home');
+            } else {
+                alert('Account ID not found. Try demo IDs: CIT-1042, CLN-3041, GCC-8821, or ADM-9901.');
+            }
+        }
+
+        // HANDLE REGISTER (CREATE ACCOUNT)
+        function handleRegisterSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const role = document.getElementById('reg-role').value;
+            const zone = document.getElementById('reg-zone').value;
+
+            // Generate Unique ID Prefix
+            let prefix = "CIT-";
+            let roleFormatted = "Citizen";
+            if(role === 'cleaner') { prefix = "CLN-"; roleFormatted = "Sanitation Worker"; }
+            else if(role === 'authority') { prefix = "GCC-"; roleFormatted = "GCC Zonal Officer"; }
+            else if(role === 'admin') { prefix = "ADM-"; roleFormatted = "Super Admin"; }
+
+            const generatedId = prefix + Math.floor(1000 + Math.random() * 9000);
+            const newUser = {
+                id: generatedId,
+                name: name,
+                role: roleFormatted,
+                zone: zone,
+                points: 50
+            };
+
+            userAccounts.push(newUser);
+            currentUser = newUser;
+            renderAuthSessionUI();
+            alert(`Account Created Successfully!\nYour Unique Account ID is: ${generatedId}`);
+            switchTab('citizen');
+        }
+
+        function handleSignOut() {
+            currentUser = null;
+            renderAuthSessionUI();
+            switchTab('home');
+        }
+
+        function renderAuthSessionUI() {
+            const guestNav = document.getElementById('auth-nav-guest');
+            const userNav = document.getElementById('auth-nav-user');
+
+            if(currentUser) {
+                guestNav.classList.add('hidden');
+                userNav.classList.remove('hidden');
+                userNav.classList.add('flex');
+                document.getElementById('nav-user-name').textContent = currentUser.name;
+                document.getElementById('nav-user-id').textContent = currentUser.id;
+            } else {
+                guestNav.classList.remove('hidden');
+                userNav.classList.add('hidden');
+            }
+            renderAdminConsole();
+        }
+
+        // LEAFLET MAP INITIALIZATION
+        function initLeafletMap() {
+            if (mapInstance) return;
+            mapInstance = L.map('map').setView([13.04, 80.24], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mapInstance);
+
+            updateMapMarkers();
+        }
+
+        function updateMapMarkers() {
+            if (!mapInstance) return;
+            grievances.forEach(g => {
+                L.marker([g.lat, g.lng])
+                    .addTo(mapInstance)
+                    .bindPopup(`
+                        <div class="text-xs p-1">
+                            <strong class="text-emerald-700">${g.category}</strong><br/>
+                            <span>${g.location}</span><br/>
+                            <span class="font-bold">Status: ${g.status}</span>
+                        </div>
+                    `);
+            });
+        }
+
+        // PHOTO SELECTION
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentPhotoDataUrl = e.target.result;
+                    document.getElementById('photo-preview').src = currentPhotoDataUrl;
+                    document.getElementById('photo-preview-container').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeSelectedPhoto() {
+            currentPhotoDataUrl = null;
+            document.getElementById('report-photo-input').value = '';
+            document.getElementById('photo-preview-container').classList.add('hidden');
+        }
+
+        // GPS LOCATION FETCH
+        function fetchCurrentGPS() {
+            const statusText = document.getElementById('gps-status-text');
+            if (navigator.geolocation) {
+                statusText.textContent = "Acquiring GPS...";
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        document.getElementById('report-lat').value = pos.coords.latitude;
+                        document.getElementById('report-lng').value = pos.coords.longitude;
+                        statusText.textContent = `Attached: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+                    },
+                    () => { statusText.textContent = "GPS Unavailable (Default Chennai)"; }
+                );
+            } else {
+                statusText.textContent = "Geolocation not supported";
+            }
+        }
+
+        // MODALS
+        function openReportModal() { document.getElementById('modal-report').classList.remove('hidden'); }
+        function closeReportModal() { document.getElementById('modal-report').classList.add('hidden'); removeSelectedPhoto(); }
+
+        function openPhotoInspectModal(photoUrl, caption) {
+            document.getElementById('inspect-full-photo').src = photoUrl;
+            document.getElementById('inspect-photo-caption').textContent = caption;
+            document.getElementById('modal-photo-inspect').classList.remove('hidden');
+        }
+        function closePhotoInspectModal() { document.getElementById('modal-photo-inspect').classList.add('hidden'); }
+
+        // REPORT SUBMISSION
+        function handleReportSubmit(e) {
+            e.preventDefault();
+            const category = document.getElementById('report-category').value;
+            const location = document.getElementById('report-location').value;
+            const lat = parseFloat(document.getElementById('report-lat').value);
+            const lng = parseFloat(document.getElementById('report-lng').value);
+            const defaultPhoto = "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80";
+
+            const userTag = currentUser ? `${currentUser.name} (${currentUser.id})` : "Anonymous Citizen";
+            const newGrievance = {
+                id: "GRV-" + Math.floor(100 + Math.random() * 900),
+                category: category,
+                location: location,
+                lat: lat,
+                lng: lng,
+                photo: currentPhotoDataUrl || defaultPhoto,
+                upvotes: 1,
+                urgency: "High",
+                status: "Pending",
+                assignedWorker: "Unassigned",
+                citizen: userTag,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            grievances.unshift(newGrievance);
+            if(currentUser && currentUser.points !== undefined) currentUser.points += 50;
+
+            closeReportModal();
+            renderAllViews();
+            updateMapMarkers();
+            updateCharts();
+        }
+
+        // WASTE SEGREGATION SEARCH
+        function searchWasteSegregation() {
+            const query = document.getElementById('segregation-search').value.toLowerCase();
+            const cards = document.querySelectorAll('#segregation-results > div');
+            cards.forEach(card => {
+                if(card.textContent.toLowerCase().includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // UPVOTE CIVIC ISSUE
+        function upvoteGrievance(id) {
+            const item = grievances.find(g => g.id === id);
+            if (item) {
+                item.upvotes += 1;
+                renderCommunityFeed();
+            }
+        }
+
+        function joinDrive(driveName) {
+            alert(`Thank you for registering for ${driveName}! Confirmation details sent.`);
+        }
+
+        // SUPER ADMIN PASSCODE VERIFICATION
+        function verifyAdminAccess() {
+            const pass = document.getElementById('admin-passcode-input').value;
+            if (pass === 'admin123' || pass === 'admin' || (currentUser && currentUser.role === 'Super Admin')) {
+                isAdminAuthenticated = true;
+                document.getElementById('admin-auth-guard').classList.add('hidden');
+                document.getElementById('admin-console-content').classList.remove('hidden');
+            } else {
+                alert('Invalid Super-Admin Passcode. Try "admin123"');
+            }
+        }
+
+        // DISPATCH ALERT
+        function dispatchCivicAlert() {
+            const text = document.getElementById('admin-alert-text').value;
+            if (text.trim() !== '') {
+                document.getElementById('alert-banner-text').textContent = "MUNICIPAL ALERT: " + text;
+                document.getElementById('alert-banner-container').classList.remove('hidden');
+                document.getElementById('admin-alert-text').value = '';
+            }
+        }
+        function dismissAlert() { document.getElementById('alert-banner-container').classList.add('hidden'); }
+
+        // EXPORT CSV
+        function exportGrievancesCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,ID,Category,Location,Status,Upvotes,Citizen,Date\n";
+            grievances.forEach(g => {
+                csvContent += `${g.id},"${g.category}","${g.location}",${g.status},${g.upvotes},"${g.citizen}",${g.date}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Chennai_Waste_Grievances_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // RENDER VIEWS
+        function renderAllViews() {
+            renderHomeStats();
+            renderCitizenList();
+            renderCommunityFeed();
+            renderCleanerTasks();
+            renderAuthorityTable();
+            renderAdminConsole();
+        }
+
+        function renderHomeStats() {
+            const total = grievances.length;
+            const pending = grievances.filter(g => g.status === 'Pending').length;
+            const resolved = grievances.filter(g => g.status === 'Resolved').length;
+
+            document.getElementById('home-stat-total').textContent = total;
+            document.getElementById('home-stat-pending').textContent = pending;
+            document.getElementById('home-stat-resolved').textContent = resolved;
+        }
+
+        function renderCitizenList() {
+            const container = document.getElementById('citizen-grievance-list');
+            if(!container) return;
+            container.innerHTML = '';
+            grievances.forEach(g => {
+                const mapsUrl = `https://www.google.com/maps?q=${g.lat},${g.lng}`;
+                container.innerHTML += `
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 flex items-center justify-between gap-3 text-xs">
+                        <div class="flex items-center space-x-3">
+                            <img src="${g.photo}" onclick="openPhotoInspectModal('${g.photo}', '${g.location}')" class="w-12 h-12 object-cover rounded-lg border border-gray-300 dark:border-gray-600 hover:opacity-80 transition cursor-pointer">
+                            <div>
+                                <div class="font-bold text-gray-900 dark:text-white">${g.category}</div>
+                                <div class="text-gray-500 dark:text-gray-400 text-[11px]">${g.location}</div>
+                                <a href="${mapsUrl}" target="_blank" class="text-emerald-600 hover:underline font-semibold text-[10px] inline-flex items-center gap-1 mt-0.5"><i class="fa-solid fa-diamond-turn-right"></i> Navigate Map</a>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 rounded-full text-[10px] font-bold ${g.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${g.status}</span>
+                    </div>
+                `;
+            });
+            if(currentUser && currentUser.points !== undefined) {
+                document.getElementById('user-eco-points').textContent = currentUser.points;
+            }
+        }
+
+        function renderCommunityFeed() {
+            const container = document.getElementById('community-feed-list');
+            if(!container) return;
+            container.innerHTML = '';
+            grievances.forEach(g => {
+                const mapsUrl = `https://www.google.com/maps?q=${g.lat},${g.lng}`;
+                container.innerHTML += `
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                        <img src="${g.photo}" onclick="openPhotoInspectModal('${g.photo}', '${g.location}')" class="w-full sm:w-28 h-28 object-cover rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-90">
+                        <div class="flex-grow space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded">${g.category}</span>
+                                <span class="text-xs text-gray-400">${g.date}</span>
+                            </div>
+                            <h4 class="font-bold text-sm text-gray-900 dark:text-white">${g.location}</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Reported by: ${g.citizen}</p>
+                            <div class="pt-2 flex items-center space-x-3 text-xs">
+                                <a href="${mapsUrl}" target="_blank" class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-lg font-semibold hover:bg-gray-200"><i class="fa-solid fa-location-arrow text-emerald-600 mr-1"></i> View GPS Location</a>
+                                <button onclick="upvoteGrievance('${g.id}')" class="bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-lg font-bold hover:bg-amber-100 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-up"></i> Urgency Upvotes (${g.upvotes})
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderCleanerTasks() {
+            const container = document.getElementById('cleaner-task-table');
+            if(!container) return;
+            container.innerHTML = '';
+            grievances.forEach(g => {
+                const mapsUrl = `https://www.google.com/maps?q=${g.lat},${g.lng}`;
+                container.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-mono font-bold">${g.id}</td>
+                        <td class="p-3">
+                            <img src="${g.photo}" onclick="openPhotoInspectModal('${g.photo}', '${g.location}')" class="w-10 h-10 object-cover rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer">
+                        </td>
+                        <td class="p-3">
+                            <div>${g.location}</div>
+                            <a href="${mapsUrl}" target="_blank" class="text-xs text-emerald-600 font-semibold hover:underline"><i class="fa-solid fa-map-pin"></i> Open GPS Route</a>
+                        </td>
+                        <td class="p-3"><span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded">${g.urgency}</span></td>
+                        <td class="p-3"><span class="font-semibold text-xs">${g.status}</span></td>
+                        <td class="p-3 text-right">
+                            ${g.status !== 'Resolved' ? `<button onclick="updateStatus('${g.id}', 'Resolved')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg">Mark Cleaned</button>` : `<span class="text-emerald-600 font-bold text-xs"><i class="fa-solid fa-check-double"></i> Done</span>`}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderAuthorityTable() {
+            const container = document.getElementById('authority-grievance-table');
+            if(!container) return;
+            container.innerHTML = '';
+            grievances.forEach(g => {
+                container.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-mono font-bold">${g.id}</td>
+                        <td class="p-3">
+                            <img src="${g.photo}" onclick="openPhotoInspectModal('${g.photo}', '${g.location}')" class="w-10 h-10 object-cover rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer">
+                        </td>
+                        <td class="p-3 text-xs">${g.citizen}</td>
+                        <td class="p-3">${g.category}</td>
+                        <td class="p-3 text-xs">${g.location}</td>
+                        <td class="p-3 text-xs font-semibold">${g.assignedWorker}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${g.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${g.status}</span></td>
+                        <td class="p-3 text-right space-x-1">
+                            <button onclick="updateStatus('${g.id}', 'In Progress')" class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md">Dispatch</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderAdminConsole() {
+            const container = document.getElementById('admin-grievance-table');
+            const dirContainer = document.getElementById('admin-user-directory');
+            if(!container || !dirContainer) return;
+
+            // Directory
+            dirContainer.innerHTML = '';
+            userAccounts.forEach(u => {
+                dirContainer.innerHTML += `
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                        <span class="font-bold text-emerald-600">${u.role}</span>: <span class="font-mono font-bold">${u.id}</span> (${u.name})
+                        <div class="text-gray-500 mt-0.5">${u.zone}</div>
+                    </div>
+                `;
+            });
+
+            // Master Table
+            container.innerHTML = '';
+            grievances.forEach(g => {
+                container.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-mono font-bold">${g.id}</td>
+                        <td class="p-3">
+                            <img src="${g.photo}" onclick="openPhotoInspectModal('${g.photo}', '${g.location}')" class="w-10 h-10 object-cover rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer">
+                        </td>
+                        <td class="p-3 text-xs">${g.location}</td>
+                        <td class="p-3 text-xs font-semibold">${g.assignedWorker}</td>
+                        <td class="p-3"><span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded">${g.urgency}</span></td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${g.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${g.status}</span></td>
+                        <td class="p-3 text-right space-x-1">
+                            <button onclick="reassignWorker('${g.id}')" class="bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold px-2 py-1 rounded">Reassign</button>
+                            <button onclick="deleteGrievance('${g.id}')" class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-2 py-1 rounded"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const total = grievances.length;
+            const resolved = grievances.filter(g => g.status === 'Resolved').length;
+            const rate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+
+            document.getElementById('admin-stat-total').textContent = total;
+            document.getElementById('admin-stat-rate').textContent = `${rate}%`;
+        }
+
+        function updateStatus(id, newStatus) {
+            const item = grievances.find(g => g.id === id);
+            if (item) {
+                item.status = newStatus;
+                renderAllViews();
+                updateCharts();
+            }
+        }
+
+        function reassignWorker(id) {
+            const worker = prompt("Enter Sanitation Worker Account ID:", "CLN-3041 (Murugan S.)");
+            if(worker) {
+                const item = grievances.find(g => g.id === id);
+                if(item) {
+                    item.assignedWorker = worker;
+                    renderAllViews();
+                }
+            }
+        }
+
+        function deleteGrievance(id) {
+            grievances = grievances.filter(g => g.id !== id);
+            renderAllViews();
+            updateCharts();
+        }
+
+        // CHARTS
+        function initCharts() {
+            const catCanvas = document.getElementById('categoryChart');
+            const statusCanvas = document.getElementById('statusChart');
+            if(!catCanvas || !statusCanvas) return;
+
+            categoryChartInstance = new Chart(catCanvas.getContext('2d'), {
+                type: 'doughnut',
+                data: getCategoryChartData(),
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            statusChartInstance = new Chart(statusCanvas.getContext('2d'), {
+                type: 'pie',
+                data: getStatusChartData(),
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function updateCharts() {
+            if (categoryChartInstance && statusChartInstance) {
+                categoryChartInstance.data = getCategoryChartData();
+                categoryChartInstance.update();
+
+                statusChartInstance.data = getStatusChartData();
+                statusChartInstance.update();
+            }
+        }
+
+        function getCategoryChartData() {
+            const counts = {};
+            grievances.forEach(g => counts[g.category] = (counts[g.category] || 0) + 1);
+            return {
+                labels: Object.keys(counts),
+                datasets: [{
+                    data: Object.values(counts),
+                    backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444']
+                }]
+            };
+        }
+
+        function getStatusChartData() {
+            const counts = { 'Pending': 0, 'In Progress': 0, 'Resolved': 0 };
+            grievances.forEach(g => counts[g.status] = (counts[g.status] || 0) + 1);
+            return {
+                labels: Object.keys(counts),
+                datasets: [{
+                    data: Object.values(counts),
+                    backgroundColor: ['#f59e0b', '#3b82f6', '#10b981']
+                }]
+            };
+        }
+
+        // DARK MODE TOGGLE
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if(document.documentElement.classList.contains('dark')) {
+                icon.className = 'fa-solid fa-sun text-amber-400 text-lg';
+            } else {
+                icon.className = 'fa-solid fa-moon text-lg';
+            }
+        }
+    </script>
+</body>
+</html>
